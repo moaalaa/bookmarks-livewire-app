@@ -4,74 +4,46 @@ services:
     build:
       context: .
       target: development
-    image: bookmark-node-app-dev:latest
-    container_name: bookmark-node-app-dev
-    ports:
-      - 3000:3000
-    environment:
-      - PORT=3000
-      - NODE_ENV=development
-      - MONGO_URL=mongodb://root:4298@mongo_db:27017/
-      - REDIS_URL=redis://cache:6379
+    image: bookmark-laravel-app:latest
+    container_name: bookmark-laravel-app-dev
+    env_file: .env.dev
     restart: unless-stopped
+    ports:
+      - "8080:80"
     develop:
       watch:
         - path: ./
-          target: ./app
+          target: .
           action: sync
         - path: Dockerfile
           action: rebuild
         - path: package.json
           action: rebuild
+        - path: composer.json
+          action: rebuild
     depends_on:
-      - mongo_db
-      - cache
+      - mysql_db
+    #   - cache
 
-  server:
-    image: nginx:1.31-alpine
-    volumes:
-    - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    ports:
-      - "8080:80"
-    environment:
-      - NGINX_HOST=foobar.com
-      - NGINX_PORT=80
-    depends_on:
-      - web
-
-  mongo_db:
-    image: mongo:8.3-noble
+  mysql_db:
+    image: mysql:8.4
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: 4298
+        - MYSQL_ROOT_PASSWORD=4298
     volumes:
-      - mongo-data:/data/db
-  
-  mongo-express:
-    image: mongo-express
-    restart: unless-stopped
-    ports:
-      - 8081:8081
-    environment:
-      ME_CONFIG_MONGODB_URL: mongodb://root:4298@mongo_db:27017/
-      ME_CONFIG_BASICAUTH_ENABLED: true
-      ME_CONFIG_BASICAUTH_USERNAME: root
-      ME_CONFIG_BASICAUTH_PASSWORD: 4298
-    depends_on:
-      - mongo_db
-
-  cache:
-    image: redis:8-alpine
-    restart: unless-stopped
-    # ports: DOn't need it i will not connect outside docker
-    #   - "6379:6379"
-    volumes:
-      - cache-data:/data
-    command: ["redis-server", "--appendonly", "yes"]
+        - mysqldb-data:/var/lib/mysql
+      
+  # cache:
+  #   image: redis:8-alpine
+  #   restart: unless-stopped
+  #   # ports: DOn't need it i will not connect outside docker
+  #   #   - "6379:6379"
+  #   volumes:
+  #     - cache-data:/data
+  #   command: ["redis-server", "--appendonly", "yes"]
 
 volumes:
-  mongo-data:
+  mysqldb-data:
   cache-data:
     
       

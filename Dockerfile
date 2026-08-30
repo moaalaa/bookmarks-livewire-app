@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     git \
     curl \
     unzip \
+    nginx \
     libzip-dev \
     oniguruma-dev \
     icu-dev \
@@ -24,15 +25,34 @@ RUN docker-php-ext-install \
     zip \
     opcache
 
+FROM base AS builder
+#Important Alpine detail: the Nginx config directory is typically:
+#/etc/nginx/http.d/
+#rather than the Debian-style:
+#/etc/nginx/conf.d/
+
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+
+RUN chmod +x /usr/local/bin/entrypoint
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
 
 COPY composer.json composer.lock ./
 
-FROM base AS development
+COPY package.json package-lock.json ./
 
 COPY . .
 
+FROM builder AS development
+
 RUN composer install --no-interaction
+
+RUN npm install
+
+RUN npm run build
 
 RUN chown -R www-data:www-data \
     storage \
@@ -42,13 +62,26 @@ RUN chmod -R 775 \
     storage \
     bootstrap/cache
 
-EXPOSE 8000
+EXPOSE 80
 
-CMD [ "php", "artisan", "serve" ]
+CMD ["/usr/local/bin/entrypoint"]
 
-FROM base AS production
+FROM builder AS production
 
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction
+
+
+RUN chown -R www-data:www-data \
+    storage \
+    bootstrap/cache
+
+RUN chmod -R 775 \
+    storage \
+    bootstrap/cache
+
+EXPOSE 80
+
+CMD ["/usr/local/bin/entrypoint"]
