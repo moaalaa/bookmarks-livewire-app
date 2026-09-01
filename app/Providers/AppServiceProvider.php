@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -31,20 +32,25 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureDefaults(): void
     {
+        DevCommands::artisan('serve --host 0.0.0.0', 'server');
+        DevCommands::node('dev', 'vite');
+
+
         Date::use(CarbonImmutable::class);
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
+        Password::defaults(
+            fn(): ?Password => app()->isProduction()
+                ? Password::min(12)
                 ->mixedCase()
                 ->letters()
                 ->numbers()
                 ->symbols()
                 ->uncompromised()
-            : null,
+                : null,
         );
     }
 }

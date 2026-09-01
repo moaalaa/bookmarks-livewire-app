@@ -10,7 +10,6 @@ RUN apk add --no-cache \
     git \
     curl \
     unzip \
-    nginx \
     libzip-dev \
     oniguruma-dev \
     icu-dev \
@@ -25,34 +24,27 @@ RUN docker-php-ext-install \
     zip \
     opcache
 
-FROM base AS builder
-#Important Alpine detail: the Nginx config directory is typically:
-#/etc/nginx/http.d/
-#rather than the Debian-style:
-#/etc/nginx/conf.d/
+FROM base AS development
 
-COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
-
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint
-
-RUN chmod +x /usr/local/bin/entrypoint
+RUN apk add --no-cache \
+    nodejs  \
+    npm
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+COPY composer.json composer.lock package.json package-lock.json ./
 
-COPY composer.json composer.lock ./
+RUN composer install \
+    --no-interaction \
+    --prefer-dist \
+    --no-scripts
 
-COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 
-FROM builder AS development
-
-RUN composer install --no-interaction
-
-RUN npm install
-
-RUN npm run build
+RUN composer dump-autoload \
+    --optimize
 
 RUN chown -R www-data:www-data \
     storage \
@@ -64,15 +56,55 @@ RUN chmod -R 775 \
 
 EXPOSE 80
 
-CMD ["/usr/local/bin/entrypoint"]
+CMD ["composer", "dev"]
 
-FROM builder AS production
+FROM node:26-trixie AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+
+FROM base AS production
+
+#Important Alpine detail: the Nginx config directory is typically:
+#/etc/nginx/http.d/
+#rather than the Debian-style:
+#/etc/nginx/conf.d/
+
+RUN apk add --no-cache \
+    nginx
+
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint
+
+RUN chmod +x /usr/local/bin/entrypoint
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+COPY composer.json composer.lock ./
 
 RUN composer install \
     --no-dev \
+    --no-interaction \
+    --prefer-dist \
     --optimize-autoloader \
-    --no-interaction
+    --no-scripts
 
+COPY . .
+
+RUN composer dump-autoload \
+    --optimize \
+    --no-dev
+
+COPY --from=assets /app/build ./public/build
 
 RUN chown -R www-data:www-data \
     storage \
