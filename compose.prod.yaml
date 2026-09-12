@@ -1,0 +1,41 @@
+services:
+
+  web:
+    build:
+      context: .
+      target: production
+    image: bookmark-laravel-app:latest
+    container_name: bookmark-laravel-app-prod
+    env_file: .env.dev
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+      - "5173:5173"
+    depends_on:
+      - mysql_db
+    #   - cache
+
+  mysql_db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+        - MYSQL_ROOT_PASSWORD=4298
+    volumes:
+        - mysqldb-data:/var/lib/mysql
+      
+  # cache:
+  #   image: redis:8-alpine
+  #   restart: unless-stopped
+  #   # ports: DOn't need it i will not connect outside docker
+  #   #   - "6379:6379"
+  #   volumes:
+  #     - cache-data:/data
+  #   command: ["redis-server", "--appendonly", "yes"]
+
+volumes:
+  mysqldb-data:
+  cache-data:
+    
+      
+      
+      

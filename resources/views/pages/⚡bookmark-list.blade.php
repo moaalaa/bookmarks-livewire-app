@@ -34,7 +34,7 @@ new #[Layout('layouts::app')] #[Title('Links · LinkBox')] class extends Compone
                 <h3 class="text-base-content font-medium">{{ $link->title }}</h3>
                 <a href="{{ $link->url }}" target="_blank" rel="noopener"
                     class="link link-primary link-hover break-all text-sm">
-                    {{ $link->url }}🤡
+                    {{ $link->url }}🤡😂
                 </a>
             </div>
         @empty

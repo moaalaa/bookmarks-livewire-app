@@ -104,7 +104,7 @@ RUN composer dump-autoload \
     --optimize \
     --no-dev
 
-COPY --from=assets /app/build ./public/build
+COPY --from=assets /app/public/build ./public/build
 
 RUN chown -R www-data:www-data \
     storage \
